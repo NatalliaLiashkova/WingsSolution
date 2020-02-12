@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace WingsAPI.Model
+namespace WingsAPI.Models
 {
     public class ErrorDetails
     {

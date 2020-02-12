@@ -1,35 +1,38 @@
-﻿using System;
+﻿using AutoMapper;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using WingsOn.Dal;
 using WingsOn.Domain;
+using WingsOn.DTO;
+using WingsOnServices.Interfaces;
 
-namespace WingsAPI.Services
+namespace WingsOnServices
 {
-    public class PassengersService : IPassengersService
+    public class PassengersService : IPassengerService
     {
         #region Properties
-        private readonly PersonRepository personRepository;
-        private readonly BookingRepository bookingRepository;
-        private readonly FlightRepository flightRepository;
+        private readonly IRepository<Person> personRepository;
+        private readonly IRepository<Booking> bookingRepository;
+        private readonly IMapper mapper;
         #endregion
 
         #region Ctor
-        public PassengersService(PersonRepository repository, BookingRepository bookingRepository, FlightRepository flightRepository)
+        public PassengersService(IRepository<Person> repository, IRepository<Booking> bookingRepository, IMapper mapper)
         {
             this.personRepository = repository;
             this.bookingRepository = bookingRepository;
-            this.flightRepository = flightRepository;
+            this.mapper = mapper;
         }
         #endregion
 
         #region Public methods
-        public Person GetPersonById(int id)
+        public IEnumerable<PersonDTO> GetAllPassengers()
         {
             try
             {
-                return personRepository.Get(id);
+                return mapper.Map<List<PersonDTO>>(bookingRepository.GetAll().SelectMany(b => b.Passengers));
             }
             catch (Exception ex)
             {
@@ -37,31 +40,7 @@ namespace WingsAPI.Services
             }
         }
 
-        public IEnumerable<Person> GetAllPassengers()
-        {
-            try
-            {
-                return bookingRepository.GetAll().SelectMany(b => b.Passengers);
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-        }        
-
-        public Flight GetFlightById(int id)
-        {
-            try
-            {
-                return flightRepository.Get(id);
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-        }
-
-        public IEnumerable<Person> GetPassengersByGender(string gender)
+        public IEnumerable<PersonDTO> GetPassengersByGender(string gender)
         {
             try
             {
@@ -81,31 +60,15 @@ namespace WingsAPI.Services
             }
         }
 
-        public IEnumerable<Person> GetPassengersByFlight(string flight)
+        public async Task UpdatePerson(PersonDTO personToBeUpdated, string address)
         {
             try
             {
-                var bookings = bookingRepository.GetAll().Where(b => b.Flight.Number == flight);
-                var passengers = bookings.SelectMany(b => b.Passengers);
 
-                return passengers;
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-        }
+                personToBeUpdated.Address = address;
 
-        public async Task<Person> UpdatePerson(Person personToBeUpdated, Person person)
-        {
-            try
-            {
-                personToBeUpdated.Address = person.Address;
-
-                await Task.Run(() => personRepository.Save(personToBeUpdated));
-                UpdatePassenger(personToBeUpdated.Id, person.Address);
-
-                return personRepository.Get(personToBeUpdated.Id);
+                await Task.Run(() => personRepository.Save(mapper.Map<Person>(personToBeUpdated)));
+                UpdatePassenger(personToBeUpdated.Id, address);
             }
             catch (Exception ex)
             {

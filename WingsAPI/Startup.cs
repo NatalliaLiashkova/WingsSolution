@@ -1,14 +1,18 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NLog;
+using System.Globalization;
 using System.IO;
 using WingsAPI.CustomException;
 using WingsAPI.Logging;
-using WingsAPI.Services;
 using WingsOn.Dal;
+using WingsOn.Domain;
+using WingsOnServices;
+using WingsOnServices.Interfaces;
 
 namespace WingsAPI
 {
@@ -24,18 +28,27 @@ namespace WingsAPI
 
         public IConfiguration Configuration { get; }
 
-        // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
+            services.AddAutoMapper();
+            services.AddMvc()
+                .SetCompatibilityVersion(CompatibilityVersion.Version_2_2)
+                .AddJsonOptions(options =>
+                {
+                    options.SerializerSettings.Culture = new CultureInfo("nl-NL");
+                });
+
             services.AddSingleton<ILog, LogNLog>();
-            services.AddScoped<IPassengersService, PassengersService>();
-            services.AddScoped<PersonRepository>();
-            services.AddScoped<BookingRepository>();
-            services.AddScoped<FlightRepository>();
+            services.AddSingleton<IRepository<Booking>, BookingRepository>();
+            services.AddSingleton<IRepository<Flight>, FlightRepository>();
+            services.AddSingleton<IRepository<Person>, PersonRepository>();
+
+            services.AddTransient<IPersonService, PersonService>();
+            services.AddTransient<IFlightService, FlightService>();
+            services.AddTransient<IPassengerService, PassengersService>();
+            services.AddTransient<IBookingService, BookingService>();
         }
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILog logger)
         {
             if (env.IsDevelopment())

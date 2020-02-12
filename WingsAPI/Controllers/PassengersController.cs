@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
-using WingsAPI.Services;
-using WingsOn.Domain;
+using WingsAPI.Model;
+using WingsAPI.Models;
+using WingsOnServices.Interfaces;
 
 namespace WingsAPI.Controllers
 {
@@ -10,73 +13,55 @@ namespace WingsAPI.Controllers
     public class PassengersController : ControllerBase
     {
         #region Properties
-        private readonly IPassengersService passengersService;
+        private readonly IPassengerService passengersService;
+        private readonly IPersonService personService;
+        private readonly IMapper mapper;
         #endregion
 
         #region Ctors
-        public PassengersController(IPassengersService service)
+        public PassengersController(IPassengerService service, IPersonService personService, IMapper mapper)
         {
             this.passengersService = service;
+            this.personService = personService;
+            this.mapper = mapper;
         }
         #endregion  
 
         #region HttpGet methods 
         [HttpGet]
-        [Route("api/passengers/{personId}")]
-        public IActionResult GetPersonById(int personId)
-        {
-            if (personId < 0)
-            {
-                throw new Exception("Please enter valid value for id.");
-            }
-
-            var response = passengersService.GetPersonById(personId);
-
-            if(response == null)
-            {
-                return NotFound();
-            }
-
-            return Ok(response);     
-        }
-
-        [HttpGet]
         [Route("api/passengers")]
-        public IActionResult GetPassengers(string gender = "")
+        public ActionResult<IEnumerable<PersonModel>> GetPassengers(string gender = "")
         {
-            gender = gender ?? "";
-            var response = passengersService.GetPassengersByGender(gender);
-            return Ok(response);
-        }
-
-        [HttpGet]
-        [Route("api/passengers/getPassengersByFlight/{flight}")]
-        public IActionResult GetPassengersByFlight(string flight)
-        {
-            if (String.IsNullOrEmpty(flight))
+            if(gender == null)
             {
-                return NotFound();
+                throw new ArgumentException();
             }
-            
-            var response = passengersService.GetPassengersByFlight(flight);
+
+            var response = mapper.Map<IList<PersonModel>>(passengersService.GetPassengersByGender(gender));
             return Ok(response);
         }
         #endregion
 
-        #region HttpPut methods
-        [HttpPut("{id}")]
-        [Route("api/persons/update/{id}")]
-        public async Task<ActionResult<Person>> UpdatePerson(int id, [FromBody] Person savePerson)
+        #region HttpPatch methods
+        [HttpPatch]
+        [Route("api/passengers/update/{id}")]
+        public async Task<IActionResult> UpdatePassenger(int id, [FromBody] AddressModel address)
         {
-            var personToBeUpdated = passengersService.GetPersonById(id);
+            if (String.IsNullOrWhiteSpace(address.Address))
+            {
+                throw new ArgumentException();
+            }
+
+            var personToBeUpdated = personService.GetPersonById(id);
 
             if (personToBeUpdated == null)
             {
                 return NotFound();
             }
-
-            var updatedPerson = await passengersService.UpdatePerson(personToBeUpdated, savePerson);
-            return Ok();
+            var savePerson = new PersonModel() { Address = address.Address };
+            await passengersService.UpdatePerson(personToBeUpdated, address.Address);
+            
+            return NoContent();
         }
         #endregion
     }
