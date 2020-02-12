@@ -2,8 +2,8 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using System.Net;
-using WingsAPI.Model;
 using WingsAPI.Logging;
+using WingsAPI.Models;
 
 namespace WingsAPI.CustomException
 {
